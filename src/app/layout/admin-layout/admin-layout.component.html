@@ -12,18 +12,48 @@
       <a mat-list-item routerLink="">Ventas</a>
     </mat-nav-list>
   </mat-sidenav>
+
   <mat-sidenav-content>
     <mat-toolbar color="primary">
-      @if (isHandset$ | async) {
-      <button type="button" aria-label="Toggle sidenav" mat-icon-button (click)="drawer.toggle()">
+      <button *ngIf="isHandset$ | async" type="button" aria-label="Toggle sidenav" mat-icon-button (click)="drawer.toggle()">
         <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
       </button>
-      }
       <span>Productos</span>
     </mat-toolbar>
-    <!-- Add Content Here -->
-    <div class="main-container">
-      <router-outlet />
+
+    <!-- Filtros por nombre y estado -->
+    <div style="padding: 1rem;">
+      <mat-form-field appearance="fill">
+        <mat-label>Nombre</mat-label>
+        <input matInput [(ngModel)]="nameFilter" (input)="applyFilters()" placeholder="Filtrar por nombre" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Estado</mat-label>
+        <input matInput [(ngModel)]="stateFilter" (input)="applyFilters()" placeholder="Filtrar por estado" />
+      </mat-form-field>
+    </div>
+
+    <!-- Tabla de productos -->
+    <div class="main-container" style="padding: 1rem;">
+      <table mat-table [dataSource]="filteredProducts">
+        <!-- Columna de nombre -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef> Nombre </th>
+          <td mat-cell *matCellDef="let product"> {{ product.name }} </td>
+        </ng-container>
+
+        <!-- Columna de estado -->
+        <ng-container matColumnDef="state">
+          <th mat-header-cell *matHeaderCellDef> Estado </th>
+          <td mat-cell *matCellDef="let product"> {{ mapStateToText(product.state) }} </td>
+        </ng-container>
+
+        <!-- Fila de cabecera -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <!-- Fila de datos -->
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>

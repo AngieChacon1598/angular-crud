@@ -1,66 +1,75 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
+import { Component, OnInit } from '@angular/core';
 import { ProductService } from '../../../core/services/product.service';
 import { Product } from '../../../core/interfaces/product';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { SaveProductDlgComponent } from '../save-product-dlg/save-product-dlg.component';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Observable } from 'rxjs';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { map, shareReplay } from 'rxjs/operators';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTableModule } from '@angular/material/table';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-product-home',
-  imports: [
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule
-  ],
+  standalone: true,
   templateUrl: './product-home.component.html',
-  styleUrl: './product-home.component.scss'
+  styleUrls: ['./product-home.component.scss'],
+  imports: [
+    MatIconModule,
+    MatButtonModule,
+    MatTableModule,  // Asegúrate de importar MatTableModule
+    FormsModule,
+    CommonModule,
+  ]
 })
 export class ProductHomeComponent implements OnInit {
-  columns: string[] = ['image', 'name', 'description', 'currency', 'price', 'state', 'action'];
-  dataSource: Product[] = [];
+  products: Product[] = [];
+  filteredProducts: Product[] = [];
+  nameFilter: string = '';
+  stateFilter: string = '';
 
-  productService = inject(ProductService);
-  private dialog = inject(MatDialog);
-  private snackbar = inject(MatSnackBar);
+  // Definir las columnas de la tabla
+  displayedColumns: string[] = ['image', 'name', 'description', 'currency', 'price', 'state', 'action'];
 
-  ngOnInit(): void {
-    this.getAll();
+  isHandset$: Observable<boolean>;
+
+  constructor(private productService: ProductService, private breakpointObserver: BreakpointObserver) {
+    this.isHandset$ = this.breakpointObserver.observe(Breakpoints.Handset)
+      .pipe(
+        map(result => result.matches),
+        shareReplay()
+      );
   }
 
-  getAll(): void {
-    this.productService.getAll().subscribe(res => {
-      console.log('Api response:', res.data);
-      this.dataSource = res.data;
-    })
+  ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  loadProducts(): void {
+    this.productService.getAll().subscribe(response => {
+      this.products = response.data;
+      this.filteredProducts = this.products;
+    });
+  }
+
+  applyFilters(): void {
+    this.filteredProducts = this.products.filter(product => {
+      const matchesName = product.name.toLowerCase().includes(this.nameFilter.toLowerCase());
+      const matchesState = this.stateFilter ? this.mapStateToText(product.state).toLowerCase() === this.stateFilter.toLowerCase() : true;
+      return matchesName && matchesState;
+    });
+  }
+
+  mapStateToText(state: number): string {
+    return state === 1 ? 'Activo' : 'Inactivo';
   }
 
   openProductDlg(product?: Product): void {
-    const dialogRef = this.dialog.open(SaveProductDlgComponent, {
-      width: '500px',
-      data: product
-    });
-
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) {
-        this.getAll();
-      }
-    });
+    console.log('Open dialog for product:', product);
   }
 
-  inactiveProduct(id: number) {
-    this.productService.inactive(id).subscribe(res => {
-      if (res.status) {
-        this.getAll();
-        this.snackbar.open('Se inactivo el producto', 'Aceptar');
-      }
-    })
+  inactiveProduct(productId: number): void {
+    console.log('Inactive product with ID:', productId);
   }
-
 }
